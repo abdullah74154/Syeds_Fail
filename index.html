@@ -1,1 +1,100 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <title>ছবি আপলোড → Google Drive</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #001f3f;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding-top: 50px;
+    }
+    input, button {
+      margin: 10px;
+      padding: 10px 20px;
+      border-radius: 5px;
+      font-size: 16px;
+      border: none;
+    }
+    button {
+      background-color: #00bcd4;
+      color: white;
+      cursor: pointer;
+    }
+    img {
+      max-width: 300px;
+      margin-top: 20px;
+      border: 3px solid #00bcd4;
+      border-radius: 10px;
+    }
+    #status {
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
 
+<h2>📷 ছবি আপলোড করুন</h2>
+<form id="uploadForm">
+  <input type="file" id="fileInput" accept="image/*" required /><br>
+  <button type="submit">⏫ আপলোড</button>
+</form>
+
+<img id="preview" style="display:none" />
+<p id="status"></p>
+
+<script>
+  const form = document.getElementById("uploadForm");
+  const fileInput = document.getElementById("fileInput");
+  const preview = document.getElementById("preview");
+  const status = document.getElementById("status");
+
+  const GDRIVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxNauFOsiR2IoQRJm7C2ZUsFFcfH7FIEeP4TPm_Vi7g7m8_hNTLAYgLXozPYTauhqgHg/exec";
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const file = fileInput.files[0];
+    if (!file) return;
+
+    status.textContent = "📤 আপলোড হচ্ছে... দয়া করে অপেক্ষা করুন...";
+    preview.style.display = "none";
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result.split(",")[1];
+
+      const formData = new FormData();
+      formData.append("file", base64);
+      formData.append("filename", file.name);
+      formData.append("mimetype", file.type);
+
+      try {
+        const response = await fetch(GDRIVE_SCRIPT_URL, {
+          method: "POST",
+          body: formData,
+        });
+
+        const imageUrl = await response.text();
+
+        if (imageUrl.startsWith("http")) {
+          preview.src = imageUrl;
+          preview.style.display = "block";
+          status.textContent = "✅ সাফল্যের সাথে আপলোড হয়েছে!";
+        } else {
+          status.textContent = "❌ ত্রুটি: " + imageUrl;
+        }
+      } catch (err) {
+        status.textContent = "⚠️ সমস্যা হয়েছে: " + err.message;
+      }
+    };
+
+    reader.readAsDataURL(file);
+  });
+</script>
+
+</body>
+</html>
