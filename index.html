@@ -2,99 +2,107 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <title>ছবি আপলোড → Google Drive</title>
+  <title>📷 ছবি আপলোড → Firebase</title>
   <style>
     body {
-      font-family: sans-serif;
       background: #001f3f;
+      font-family: Arial, sans-serif;
       color: white;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+      text-align: center;
       padding-top: 50px;
+    }
+    .container {
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,255,255,0.1);
     }
     input, button {
       margin: 10px;
-      padding: 10px 20px;
-      border-radius: 5px;
+      padding: 10px;
       font-size: 16px;
+      border-radius: 5px;
       border: none;
     }
     button {
-      background-color: #00bcd4;
+      background: #00bcd4;
       color: white;
       cursor: pointer;
     }
     img {
-      max-width: 300px;
       margin-top: 20px;
-      border: 3px solid #00bcd4;
+      max-width: 100%;
+      border: 2px solid #00bcd4;
       border-radius: 10px;
     }
     #status {
       margin-top: 10px;
+      font-size: 14px;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>📤 ছবি আপলোড করুন</h2>
+    <input type="file" id="fileInput" accept="image/*" />
+    <br>
+    <button onclick="uploadImage()">⏫ আপলোড</button>
+    <p id="status"></p>
+    <img id="preview" style="display:none" />
+  </div>
 
-<h2>📷 ছবি আপলোড করুন</h2>
-<form id="uploadForm">
-  <input type="file" id="fileInput" accept="image/*" required /><br>
-  <button type="submit">⏫ আপলোড</button>
-</form>
+  <!-- 🔥 Firebase JS SDK -->
+  <script type="module">
+    // Import Firebase dependencies
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
 
-<img id="preview" style="display:none" />
-<p id="status"></p>
-
-<script>
-  const form = document.getElementById("uploadForm");
-  const fileInput = document.getElementById("fileInput");
-  const preview = document.getElementById("preview");
-  const status = document.getElementById("status");
-
-  const GDRIVE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwxNauFOsiR2IoQRJm7C2ZUsFFcfH7FIEeP4TPm_Vi7g7m8_hNTLAYgLXozPYTauhqgHg/exec";
-
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const file = fileInput.files[0];
-    if (!file) return;
-
-    status.textContent = "📤 আপলোড হচ্ছে... দয়া করে অপেক্ষা করুন...";
-    preview.style.display = "none";
-
-    const reader = new FileReader();
-    reader.onloadend = async () => {
-      const base64 = reader.result.split(",")[1];
-
-      const formData = new FormData();
-      formData.append("file", base64);
-      formData.append("filename", file.name);
-      formData.append("mimetype", file.type);
-
-      try {
-        const response = await fetch(GDRIVE_SCRIPT_URL, {
-          method: "POST",
-          body: formData,
-        });
-
-        const imageUrl = await response.text();
-
-        if (imageUrl.startsWith("http")) {
-          preview.src = imageUrl;
-          preview.style.display = "block";
-          status.textContent = "✅ সাফল্যের সাথে আপলোড হয়েছে!";
-        } else {
-          status.textContent = "❌ ত্রুটি: " + imageUrl;
-        }
-      } catch (err) {
-        status.textContent = "⚠️ সমস্যা হয়েছে: " + err.message;
-      }
+    // 🔐 তোমার দেওয়া কনফিগ
+    const firebaseConfig = {
+      apiKey: "AIzaSyCavNX0u11PVGFxXhKaWeErL9OMI6hcuic",
+      authDomain: "syed-49e63.firebaseapp.com",
+      projectId: "syed-49e63",
+      storageBucket: "syed-49e63.appspot.com",
+      messagingSenderId: "185756118878",
+      appId: "1:185756118878:web:b9a4f5d0c516c5d89c69cf",
+      measurementId: "G-SFZG6HMT7T"
     };
 
-    reader.readAsDataURL(file);
-  });
-</script>
+    // Init Firebase
+    const app = initializeApp(firebaseConfig);
+    const storage = getStorage(app);
 
+    window.uploadImage = async function () {
+      const fileInput = document.getElementById("fileInput");
+      const file = fileInput.files[0];
+      const status = document.getElementById("status");
+      const preview = document.getElementById("preview");
+
+      if (!file) {
+        status.textContent = "⚠️ একটি ছবি নির্বাচন করুন।";
+        return;
+      }
+
+      status.textContent = "⏳ আপলোড হচ্ছে...";
+      preview.style.display = "none";
+
+      const fileName = `uploads/${Date.now()}_${file.name}`;
+      const fileRef = ref(storage, fileName);
+
+      try {
+        await uploadBytes(fileRef, file);
+        const fileURL = await getDownloadURL(fileRef);
+
+        status.innerHTML = `✅ আপলোড সফল! <a href="${fileURL}" target="_blank">ডাউনলোড করুন</a>`;
+        preview.src = fileURL;
+        preview.style.display = "block";
+      } catch (err) {
+        console.error(err);
+        status.textContent = "❌ ত্রুটি: " + err.message;
+      }
+    }
+  </script>
 </body>
 </html>
