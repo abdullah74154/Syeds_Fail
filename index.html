@@ -2,26 +2,26 @@
 <html lang="bn">
 <head>
   <meta charset="UTF-8">
-  <title>📷 ছবি আপলোড → Firebase</title>
+  <title>📤 Google Drive ছবি আপলোডার</title>
   <style>
     body {
       background: #001f3f;
-      font-family: Arial, sans-serif;
+      font-family: sans-serif;
       color: white;
       text-align: center;
-      padding-top: 50px;
+      padding-top: 60px;
     }
     .container {
       max-width: 400px;
       margin: auto;
-      padding: 20px;
       background: rgba(255, 255, 255, 0.05);
-      border-radius: 10px;
-      box-shadow: 0 0 20px rgba(0,255,255,0.1);
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.3);
     }
     input, button {
       margin: 10px;
-      padding: 10px;
+      padding: 10px 20px;
       font-size: 16px;
       border-radius: 5px;
       border: none;
@@ -32,7 +32,7 @@
       cursor: pointer;
     }
     img {
-      margin-top: 20px;
+      margin-top: 15px;
       max-width: 100%;
       border: 2px solid #00bcd4;
       border-radius: 10px;
@@ -44,65 +44,63 @@
   </style>
 </head>
 <body>
+
   <div class="container">
-    <h2>📤 ছবি আপলোড করুন</h2>
-    <input type="file" id="fileInput" accept="image/*" />
-    <br>
-    <button onclick="uploadImage()">⏫ আপলোড</button>
+    <h2>📷 ছবি আপলোড করুন</h2>
+    <form id="uploadForm">
+      <input type="file" id="fileInput" required><br>
+      <button type="submit">⏫ আপলোড</button>
+    </form>
     <p id="status"></p>
-    <img id="preview" style="display:none" />
+    <img id="preview" style="display:none;" />
   </div>
 
-  <!-- 🔥 Firebase JS SDK -->
-  <script type="module">
-    // Import Firebase dependencies
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
-    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-storage.js";
+  <script>
+    const form = document.querySelector("#uploadForm");
+    const status = document.querySelector("#status");
+    const preview = document.querySelector("#preview");
 
-    // 🔐 তোমার দেওয়া কনফিগ
-    const firebaseConfig = {
-      apiKey: "AIzaSyCavNX0u11PVGFxXhKaWeErL9OMI6hcuic",
-      authDomain: "syed-49e63.firebaseapp.com",
-      projectId: "syed-49e63",
-      storageBucket: "syed-49e63.appspot.com",
-      messagingSenderId: "185756118878",
-      appId: "1:185756118878:web:b9a4f5d0c516c5d89c69cf",
-      measurementId: "G-SFZG6HMT7T"
-    };
+    // ✅ তোমার Google Apps Script API URL
+    const API_URL = "https://script.google.com/macros/s/AKfycbxDikBYtYwcIyy-uBeRVEvwRjWv7cerh2GFfD3NVHxc27VWAd-jtx1JuYsr-NY6M_n1/exec";
 
-    // Init Firebase
-    const app = initializeApp(firebaseConfig);
-    const storage = getStorage(app);
-
-    window.uploadImage = async function () {
-      const fileInput = document.getElementById("fileInput");
-      const file = fileInput.files[0];
-      const status = document.getElementById("status");
-      const preview = document.getElementById("preview");
-
-      if (!file) {
-        status.textContent = "⚠️ একটি ছবি নির্বাচন করুন।";
-        return;
-      }
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      const file = document.querySelector("#fileInput").files[0];
+      if (!file) return;
 
       status.textContent = "⏳ আপলোড হচ্ছে...";
       preview.style.display = "none";
 
-      const fileName = `uploads/${Date.now()}_${file.name}`;
-      const fileRef = ref(storage, fileName);
+      const reader = new FileReader();
+      reader.onloadend = async () => {
+        const base64 = reader.result.split(",")[1];
+        const formData = new FormData();
+        formData.append("file", base64);
+        formData.append("filename", file.name);
+        formData.append("mimetype", file.type);
 
-      try {
-        await uploadBytes(fileRef, file);
-        const fileURL = await getDownloadURL(fileRef);
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            body: formData,
+          });
 
-        status.innerHTML = `✅ আপলোড সফল! <a href="${fileURL}" target="_blank">ডাউনলোড করুন</a>`;
-        preview.src = fileURL;
-        preview.style.display = "block";
-      } catch (err) {
-        console.error(err);
-        status.textContent = "❌ ত্রুটি: " + err.message;
-      }
-    }
+          const link = await res.text();
+
+          if (link.includes("http")) {
+            status.innerHTML = `✅ আপলোড সফল: <a href="${link}" target="_blank">ছবি দেখুন</a>`;
+            preview.src = link;
+            preview.style.display = "block";
+          } else {
+            throw new Error(link);
+          }
+        } catch (error) {
+          status.textContent = "❌ আপলোড ব্যর্থ: " + error.message;
+        }
+      };
+
+      reader.readAsDataURL(file);
+    });
   </script>
 </body>
 </html>
